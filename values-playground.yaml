@@ -34,15 +34,18 @@ envFrom: []
 command: []
 args: []
 
-# tcp نه http: رندر صفحه به API وابسته است و نباید pod را با قطعی پنل از سرویس خارج کند.
+# فایل ایستا نه صفحه: رندر صفحه به API وابسته است و نباید pod را با قطعی پنل از سرویس خارج کند.
+# (tcpSocket نمی‌شود: httpGet پیش‌فرض chart با آن merge می‌شود.)
 livenessProbe:
-  tcpSocket:
+  httpGet:
+    path: /favicon.svg
     port: http
   initialDelaySeconds: 10
   periodSeconds: 20
 
 readinessProbe:
-  tcpSocket:
+  httpGet:
+    path: /favicon.svg
     port: http
   initialDelaySeconds: 3
   periodSeconds: 10
