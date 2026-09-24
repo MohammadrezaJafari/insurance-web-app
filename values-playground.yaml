@@ -1,0 +1,125 @@
+---
+# وب‌اپ Quasar در حالت SSR (Node، پورت 3000).
+# مرورگر /api/v1 را روی همین دامنه صدا می‌زند و HTTPRoute آن را به سرویس insurehub-panel می‌فرستد؛
+# رندر سمت سرور مستقیم از داخل کلاستر به API_INTERNAL_URL وصل می‌شود.
+nameOverride: insurehub-web-app
+fullnameOverride: ""
+
+image:
+  repository: harbor.rahap.site/insurance/insurehub-web-app/playground
+  tag: latest
+  pullPolicy: IfNotPresent
+
+imagePullSecrets:
+  - name: reg-auth
+
+replicaCount: 1
+
+strategy:
+  type: RollingUpdate
+  rollingUpdate:
+    maxUnavailable: 0
+    maxSurge: 1
+
+minReadySeconds: 0
+
+podLabels: {}
+podAnnotations: {}
+
+env:
+  - name: API_INTERNAL_URL
+    value: http://insurehub-panel
+envFrom: []
+
+command: []
+args: []
+
+# tcp نه http: رندر صفحه به API وابسته است و نباید pod را با قطعی پنل از سرویس خارج کند.
+livenessProbe:
+  tcpSocket:
+    port: http
+  initialDelaySeconds: 10
+  periodSeconds: 20
+
+readinessProbe:
+  tcpSocket:
+    port: http
+  initialDelaySeconds: 3
+  periodSeconds: 10
+
+startupProbe: {}
+
+resources:
+  limits:
+    cpu: 500m
+    memory: 512Mi
+  requests:
+    cpu: 20m
+    memory: 128Mi
+
+containerSecurityContext: {}
+podSecurityContext: {}
+
+service:
+  enabled: true
+  type: ClusterIP
+  port: 80
+  targetPort: 3000
+  protocol: TCP
+  annotations: {}
+
+configmap:
+  enabled: false
+  data: {}
+  mount:
+    enabled: false
+    mountPath: /etc/config
+    readOnly: true
+
+secret:
+  enabled: false
+
+gateway:
+  enabled: false
+
+httproute:
+  enabled: true
+  parentRefs:
+    - name: general-gateway
+      namespace: gateway
+      sectionName: http
+  hostnames:
+    - "app.insuretech.pg.rahap.site"
+  rules:
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /api
+      backendRefs:
+        - name: insurehub-panel
+          port: 80
+          weight: 1
+      filters:
+        - type: RequestHeaderModifier
+          requestHeaderModifier:
+            set:
+              - name: X-Forwarded-Proto
+                value: https
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /
+      backendRefs:
+        - name: "{{ include \"chart.fullname\" . }}"
+          port: 80
+          weight: 1
+
+# نود مخصوص playground (k8s-worker-3)
+nodeSelector:
+  workload-class: playground
+tolerations:
+  - key: dedicated
+    operator: Equal
+    value: playground
+    effect: NoSchedule
+affinity: {}
