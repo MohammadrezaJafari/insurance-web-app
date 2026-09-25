@@ -37,6 +37,12 @@ export interface Actor {
   specialties: string[];
   website: string | null;
   public_phone: string | null;
+  office_address?: string | null;
+  location?: { lat: number; lng: number } | null;
+  established_year?: number | null;
+  stock_symbol?: string | null;
+  market?: InsurerMarket | null;
+  official_network_size?: number;
   owner_supplied_fields: string[];
   claimed: boolean;
   identity_verified: boolean;
@@ -48,6 +54,21 @@ export interface Actor {
   network?: NetworkMember[];
   sources?: Source[];
   last_reviewed_at?: string | null;
+}
+/** Figures بیمه مرکزی publishes about an insurer; money in rials, shares in percent. */
+export interface InsurerMarket {
+  year: string;
+  premium: number | null;
+  claims: number | null;
+  loss_ratio: number | null;
+  market_share: number | null;
+  premium_rank: number | null;
+  insurers_ranked: number;
+  solvency_ratio: number | null;
+  solvency_level: string | null;
+  solvency_year: string | null;
+  lines: { line: string; premium: number | null; claims: number | null }[];
+  sources: { name: string; url: string | null; year: string }[];
 }
 export interface PaginatedActors {
   data: Actor[];

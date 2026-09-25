@@ -1979,3 +1979,45 @@ h3 {
 .type-group:first-of-type {
   margin-top: 0;
 }
+
+/* ---------- Insurer report card ---------- */
+.report-card {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(128px, 1fr));
+  gap: 10px;
+  margin-bottom: 14px;
+}
+.report-card .kpi b {
+  font-size: 17px;
+}
+.report-card .kpi small {
+  display: block;
+  font-size: 12px;
+  color: var(--muted);
+  margin-top: 2px;
+}
+.line-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+  margin-top: 12px;
+}
+.line-table th,
+.line-table td {
+  text-align: start;
+  padding: 7px 8px;
+  border-bottom: 1px solid var(--line-soft);
+}
+.line-table th {
+  color: var(--muted);
+  font-weight: 500;
+}
+
+/* ---------- Office map ---------- */
+.office-map__canvas {
+  height: 200px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--line);
+  margin: 10px 0 4px;
+  z-index: 0;
+}

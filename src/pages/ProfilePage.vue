@@ -4,10 +4,11 @@ import { useMeta } from 'quasar';
 import { useRoute, useRouter } from 'vue-router';
 import { ApiError } from '../api';
 import { useDirectoryStore } from '../stores/directory';
-import { actorTypes, faDate } from '../format';
+import { actorTypes, faDate, faMoneyShort, faNumber } from '../format';
 import SiteHeader from '../components/SiteHeader.vue';
 import SiteFooter from '../components/SiteFooter.vue';
 import ReportErrorDialog from '../components/ReportErrorDialog.vue';
+import OfficeMap from '../components/OfficeMap.vue';
 
 defineOptions({
   preFetch({ store, currentRoute, ssrContext }) {
@@ -37,6 +38,16 @@ const loading = ref(false);
 const error = ref('');
 const reporting = ref(false);
 const type = computed(() => (actor.value ? actorTypes[actor.value.type] : null));
+const hasCompanyFacts = computed(
+  () =>
+    actor.value?.type === 'insurer' &&
+    Boolean(
+      actor.value.market ||
+      actor.value.official_network_size ||
+      actor.value.established_year ||
+      actor.value.stock_symbol,
+    ),
+);
 const ownerSupplied = (field: string): boolean =>
   actor.value?.owner_supplied_fields.includes(field) ?? false;
 
@@ -200,6 +211,94 @@ onMounted(() => {
             </div>
           </section>
 
+          <section v-if="hasCompanyFacts" class="card">
+            <h2><q-icon name="insights" />کارنامهٔ شرکت</h2>
+            <div v-if="actor.market" class="report-card">
+              <div class="kpi">
+                <span>حق بیمهٔ تولیدی {{ faNumber(actor.market.year) }}</span>
+                <b>{{ faMoneyShort(actor.market.premium) || '—' }}</b>
+              </div>
+              <div class="kpi">
+                <span>خسارت پرداختی {{ faNumber(actor.market.year) }}</span>
+                <b>{{ faMoneyShort(actor.market.claims) || '—' }}</b>
+              </div>
+              <div class="kpi">
+                <span>ضریب خسارت</span>
+                <b>{{
+                  actor.market.loss_ratio !== null ? `٪${faNumber(actor.market.loss_ratio)}` : '—'
+                }}</b>
+              </div>
+              <div class="kpi">
+                <span>سهم بازار</span>
+                <b>{{
+                  actor.market.market_share !== null
+                    ? `٪${faNumber(Math.round(actor.market.market_share * 10) / 10)}`
+                    : '—'
+                }}</b>
+                <small v-if="actor.market.premium_rank"
+                  >رتبهٔ {{ faNumber(actor.market.premium_rank) }} از
+                  {{ faNumber(actor.market.insurers_ranked) }}</small
+                >
+              </div>
+              <div
+                v-if="actor.market.solvency_level || actor.market.solvency_ratio !== null"
+                class="kpi"
+              >
+                <span>توانگری مالی {{ faNumber(actor.market.solvency_year ?? '') }}</span>
+                <b>{{
+                  actor.market.solvency_level ?? `٪${faNumber(actor.market.solvency_ratio ?? 0)}`
+                }}</b>
+              </div>
+              <div v-if="actor.official_network_size" class="kpi">
+                <span>نمایندهٔ فعال در فهرست رسمی</span>
+                <b>{{ faNumber(actor.official_network_size) }}</b>
+              </div>
+            </div>
+            <div v-else-if="actor.official_network_size" class="report-card">
+              <div class="kpi">
+                <span>نمایندهٔ فعال در فهرست رسمی</span>
+                <b>{{ faNumber(actor.official_network_size) }}</b>
+              </div>
+            </div>
+            <div v-if="actor.established_year" class="kv">
+              <b>سال تأسیس</b><span>{{ faNumber(String(actor.established_year)) }}</span>
+            </div>
+            <div v-if="actor.stock_symbol" class="kv">
+              <b>نماد بورسی</b><span>{{ actor.stock_symbol }}</span>
+            </div>
+            <table v-if="actor.market?.lines.length" class="line-table">
+              <thead>
+                <tr>
+                  <th>رشته</th>
+                  <th>حق بیمه</th>
+                  <th>خسارت</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-for="row in actor.market.lines" :key="row.line">
+                  <td>{{ row.line }}</td>
+                  <td>{{ faMoneyShort(row.premium) || '—' }}</td>
+                  <td>{{ faMoneyShort(row.claims) || '—' }}</td>
+                </tr>
+              </tbody>
+            </table>
+            <p v-if="actor.market" class="card__note">
+              منبع:
+              <template v-for="(source, index) in actor.market.sources" :key="source.name">
+                <template v-if="index">، </template>
+                <a
+                  v-if="source.url"
+                  :href="source.url"
+                  class="link"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  >{{ source.name }}</a
+                >
+                <span v-else>{{ source.name }}</span>
+              </template>
+            </p>
+          </section>
+
           <section class="card">
             <h2><q-icon name="workspace_premium" />مجوز و وابستگی</h2>
             <p v-if="!actor.licenses.length && !actor.affiliations?.length">
@@ -284,7 +383,18 @@ onMounted(() => {
               <q-icon name="call" /><span dir="ltr">{{ actor.public_phone }}</span>
               <span v-if="ownerSupplied('public_phone')" class="self-reported">اظهاری</span>
             </a>
-            <p v-if="!actor.website && !actor.public_phone">راه ارتباطی عمومی ثبت نشده است.</p>
+            <div v-if="actor.office_address" class="contact-line">
+              <q-icon name="place" /><span>{{ actor.office_address }}</span>
+            </div>
+            <OfficeMap
+              v-if="actor.location"
+              :lat="actor.location.lat"
+              :lng="actor.location.lng"
+              :label="actor.name"
+            />
+            <p v-if="!actor.website && !actor.public_phone && !actor.office_address">
+              راه ارتباطی عمومی ثبت نشده است.
+            </p>
           </section>
 
           <section class="card">
