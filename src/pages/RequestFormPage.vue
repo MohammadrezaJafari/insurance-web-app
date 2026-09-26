@@ -18,6 +18,7 @@ import type { Attachment, RequestDraft, RequestMeta } from '../types';
 import SiteHeader from '../components/SiteHeader.vue';
 import SiteFooter from '../components/SiteFooter.vue';
 import JalaliDateInput from '../components/JalaliDateInput.vue';
+import RequestAudience from '../components/RequestAudience.vue';
 
 useMeta({
   title: 'ثبت استعلام بیمه | اینشورهاب',
@@ -43,7 +44,16 @@ const form = reactive<RequestDraft>({
   desired_start_date: null,
   description: null,
   details: {},
+  visibility: 'matched',
+  provider_slugs: [],
+  promotion_id: null,
+  source_channel: null,
 });
+const requestLine = computed(
+  () =>
+    type.value?.line ??
+    (typeof form.details.related_line === 'string' ? form.details.related_line : null),
+);
 
 const typeGroups = computed(() => [
   {
@@ -159,8 +169,25 @@ onMounted(async () => {
         details: { ...existing.details },
       });
       attachments.value = existing.attachments;
-    } else if (typeof route.query.type === 'string') {
-      chooseType(route.query.type);
+      form.visibility = existing.visibility ?? 'matched';
+      form.provider_slugs = existing.requested_providers.map((provider) => provider.slug);
+    } else {
+      if (typeof route.query.type === 'string') chooseType(route.query.type);
+      // Direct inquiry from a profile or an offer: invite that provider.
+      if (typeof route.query.provider === 'string') {
+        form.visibility = 'invited';
+        form.provider_slugs = [route.query.provider];
+      }
+      if (typeof route.query.offer === 'string') form.promotion_id = Number(route.query.offer);
+      if (typeof route.query.line === 'string' && !form.request_type) {
+        const byLine = meta.value.types.find((item) => item.line === route.query.line);
+        if (byLine) chooseType(byLine.key);
+      }
+      try {
+        form.source_channel = sessionStorage.getItem('insurehub_ref');
+      } catch {
+        form.source_channel = null;
+      }
     }
   } catch {
     error.value = 'دریافت اطلاعات فرم ممکن نشد.';
@@ -182,9 +209,10 @@ onMounted(async () => {
       <div class="eyebrow">استعلام بیمه</div>
       <h1>نیاز بیمه‌ای خود را ثبت کنید</h1>
       <p>
-        پس از بررسی اپراتور، درخواست فقط برای حداکثر
+        پس از بررسی اپراتور، درخواست فقط به حداکثر
         {{ faNumber(meta?.max_providers ?? 5) }} ارائه‌دهندهٔ دارای مجوز بررسی‌شده در همان رشته و
-        منطقه ارسال می‌شود. اطلاعات تماس شما تا زمان انتخاب پیشنهاد نمایش داده نمی‌شود.
+        منطقه می‌رسد؛ خودتان تعیین می‌کنید با انتخاب سیستم، با دعوت خودتان یا در بازار عمومی.
+        اطلاعات تماس شما تا زمان انتخاب پیشنهاد نمایش داده نمی‌شود.
       </p>
     </header>
 
@@ -301,8 +329,21 @@ onMounted(async () => {
           </label>
         </section>
 
+        <RequestAudience
+          v-if="type"
+          v-model:visibility="form.visibility!"
+          v-model:providers="form.provider_slugs!"
+          :request-type="form.request_type"
+          :province="form.province"
+          :line="requestLine"
+          :max-providers="meta.max_providers"
+        />
+        <div v-if="errorFor('provider_slugs')" class="notice notice--error">
+          {{ errorFor('provider_slugs') }}
+        </div>
+
         <section v-if="type" class="card">
-          <h2><span class="step-no">۳</span>مدارک (اختیاری)</h2>
+          <h2><span class="step-no">۴</span>مدارک (اختیاری)</h2>
           <p class="muted-text">
             فایل‌ها خصوصی‌اند و فقط برای ارائه‌دهنده‌ای که دعوت را بپذیرد قابل مشاهده‌اند. هر دسترسی
             ثبت می‌شود.
@@ -341,7 +382,7 @@ onMounted(async () => {
       <aside v-if="type">
         <section class="card sticky-card">
           <h2>
-            <span class="step-no">۴</span
+            <span class="step-no">۵</span
             >{{ type.kind === 'service' ? 'محل و زمان' : 'محل و تعهد' }}
           </h2>
           <label class="field-label">

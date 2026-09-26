@@ -42,9 +42,10 @@ export const useDirectoryStore = defineStore('directory', {
       this.list = await listActors(params);
       this.listKey = key;
     },
-    async loadProfile(slug: string): Promise<void> {
+    /** `ref` is the referral channel (?ref=) counted with the visit. */
+    async loadProfile(slug: string, ref?: string): Promise<void> {
       if (this.profile && this.profileSlug === slug) return;
-      this.profile = await getActor(slug);
+      this.profile = await getActor(slug, ref);
       this.profileSlug = slug;
     },
     async loadTaxonomy(): Promise<void> {

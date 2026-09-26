@@ -12,7 +12,12 @@ const router = useRouter();
 const auth = useAuthStore();
 const tenders = useTenderMeta();
 const term = ref(String(route.query.q ?? ''));
+const menuOpen = ref(false);
 
+watch(
+  () => route.fullPath,
+  () => (menuOpen.value = false),
+);
 watch(
   () => route.query.q,
   (value) => (term.value = String(value ?? '')),
@@ -34,9 +39,27 @@ function submit(): void {
         <BrandMark class="brand__mark" />
         <span class="brand__name">اینشورهاب</span>
       </router-link>
-      <nav class="site-nav" aria-label="پیمایش اصلی">
+      <button
+        type="button"
+        class="menu-toggle"
+        :aria-expanded="menuOpen"
+        aria-controls="site-nav"
+        aria-label="منو"
+        @click="menuOpen = !menuOpen"
+      >
+        <q-icon :name="menuOpen ? 'close' : 'menu'" size="24px" />
+      </button>
+      <nav
+        id="site-nav"
+        class="site-nav"
+        :class="{ 'site-nav--open': menuOpen }"
+        aria-label="پیمایش اصلی"
+      >
         <router-link to="/search">جست‌وجوی بازیگران</router-link>
         <router-link to="/requests/new">ثبت استعلام</router-link>
+        <router-link to="/offers">پیشنهادهای ویژه</router-link>
+        <router-link to="/learn">آموزش</router-link>
+        <router-link to="/jobs">استخدام</router-link>
         <router-link v-if="tenders.meta.value" to="/tenders">مناقصه‌ها</router-link>
         <router-link to="/verification">معنای نشان‌ها</router-link>
       </nav>

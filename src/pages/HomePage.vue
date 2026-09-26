@@ -8,6 +8,7 @@ import type { ActorType } from '../types';
 import SiteHeader from '../components/SiteHeader.vue';
 import SiteFooter from '../components/SiteFooter.vue';
 import BrandMark from '../components/BrandMark.vue';
+import SponsoredStrip from '../components/SponsoredStrip.vue';
 
 defineOptions({
   preFetch({ store }) {
@@ -140,6 +141,10 @@ function submit(): void {
           }}</span>
         </router-link>
       </div>
+    </section>
+
+    <section class="container" style="padding-bottom: 8px">
+      <SponsoredStrip placement="home" />
     </section>
 
     <section class="container section" style="padding-top: 0">

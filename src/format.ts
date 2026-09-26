@@ -17,6 +17,37 @@ export const fieldLabels: Record<string, string> = {
   website: 'وب‌سایت',
   public_phone: 'تلفن عمومی',
   specialties: 'تخصص‌ها',
+  social_links: 'شبکه‌های اجتماعی',
+  services: 'خدمات',
+};
+
+export const socialNetworks: Record<string, { label: string; icon: string }> = {
+  instagram: { label: 'اینستاگرام', icon: 'photo_camera' },
+  linkedin: { label: 'لینکدین', icon: 'work' },
+  telegram: { label: 'تلگرام', icon: 'send' },
+  whatsapp: { label: 'واتس‌اپ', icon: 'chat' },
+  eitaa: { label: 'ایتا', icon: 'forum' },
+  bale: { label: 'بله', icon: 'forum' },
+  aparat: { label: 'آپارات', icon: 'smart_display' },
+};
+
+export const referralChannels: Record<string, string> = {
+  instagram: 'اینستاگرام',
+  linkedin: 'لینکدین',
+  telegram: 'تلگرام',
+  whatsapp: 'واتس‌اپ',
+  eitaa: 'ایتا',
+  bale: 'بله',
+  email: 'ایمیل',
+  sms: 'پیامک',
+  card: 'کارت ویزیت (QR)',
+  other: 'سایر',
+};
+
+export const itemKinds: Record<string, { label: string; icon: string }> = {
+  project: { label: 'پروژه', icon: 'engineering' },
+  achievement: { label: 'دستاورد', icon: 'military_tech' },
+  article: { label: 'محتوا', icon: 'article' },
 };
 
 export const statusLabels: Record<string, string> = {
@@ -121,7 +152,54 @@ export const leadSources: Record<string, string> = {
   platform: 'اینشورهاب',
   manual: 'ثبت دستی',
   import: 'فایل ورودی',
+  renewal: 'تمدید',
 };
+
+export const policyStatuses: Record<string, { label: string; tone: string }> = {
+  active: { label: 'فعال', tone: 'verified' },
+  renewed: { label: 'تمدیدشده', tone: 'brand' },
+  expired: { label: 'منقضی', tone: 'neutral' },
+  cancelled: { label: 'لغوشده', tone: 'danger' },
+};
+
+const jalaliMonths = [
+  'فروردین',
+  'اردیبهشت',
+  'خرداد',
+  'تیر',
+  'مرداد',
+  'شهریور',
+  'مهر',
+  'آبان',
+  'آذر',
+  'دی',
+  'بهمن',
+  'اسفند',
+];
+/** «مهر ۱۴۰۵» for a Jalali month key '1405-07' as the API groups reports. */
+export function faMonth(key: string, withYear = true): string {
+  const [year, month] = key.split('-').map(Number);
+  const name = jalaliMonths[(month ?? 1) - 1] ?? key;
+  return withYear ? `${name} ${faNumber(String(year))}` : name;
+}
+
+export function faPercent(value: number | null | undefined): string {
+  return value === null || value === undefined ? '—' : `${faNumber(value)}٪`;
+}
+
+/** First validation message of an API error, or a fallback. */
+export function errorMessage(exception: unknown, fallback = 'انجام نشد.'): string {
+  if (
+    exception &&
+    typeof exception === 'object' &&
+    'errors' in exception &&
+    'message' in exception
+  ) {
+    const errors = (exception as { errors: Record<string, string[]> }).errors;
+    return Object.values(errors)[0]?.[0] ?? String((exception as { message: string }).message);
+  }
+  return fallback;
+}
 
 export const tenderStatuses: Record<string, { label: string; tone: string }> = {
   draft: { label: 'پیش‌نویس', tone: 'neutral' },
@@ -148,3 +226,71 @@ export function proposalLabels(kind: string | undefined) {
     services: service ? 'روش کار و خروجی' : 'خدمات همراه',
   };
 }
+
+export const confirmationStatuses: Record<string, { label: string; tone: string }> = {
+  self_reported: { label: 'خوداظهاری؛ در انتظار تأیید شرکت', tone: 'amber' },
+  confirmed: { label: 'تأییدشدهٔ شرکت بیمه', tone: 'verified' },
+  rejected: { label: 'رد شده توسط شرکت', tone: 'danger' },
+};
+
+export const incentiveStatuses: Record<string, { label: string; tone: string }> = {
+  draft: { label: 'پیش‌نویس', tone: 'neutral' },
+  published: { label: 'در جریان', tone: 'brand' },
+  closed: { label: 'پایان‌یافته', tone: 'neutral' },
+};
+
+/** A value on an incentive's metric: money for premium programs, a count otherwise. */
+export function faMetric(metric: 'premium' | 'policies', value: number): string {
+  return metric === 'premium' ? faMoneyShort(value) || '۰' : `${faNumber(value)} بیمه‌نامه`;
+}
+
+export const moderationStatuses: Record<string, { label: string; tone: string }> = {
+  draft: { label: 'پیش‌نویس', tone: 'neutral' },
+  pending: { label: 'در انتظار بررسی', tone: 'amber' },
+  published: { label: 'منتشرشده', tone: 'verified' },
+  rejected: { label: 'منتشر نشد', tone: 'danger' },
+  withdrawn: { label: 'پس‌گرفته', tone: 'neutral' },
+};
+
+export const courseLevels: Record<string, string> = {
+  basic: 'مقدماتی',
+  intermediate: 'متوسط',
+  advanced: 'پیشرفته',
+};
+export const courseFormats: Record<string, string> = {
+  online: 'آنلاین',
+  in_person: 'حضوری',
+  hybrid: 'ترکیبی',
+};
+export const enrollmentStatuses: Record<string, { label: string; tone: string }> = {
+  pending_payment: { label: 'در انتظار پرداخت', tone: 'amber' },
+  enrolled: { label: 'ثبت‌نام قطعی', tone: 'brand' },
+  completed: { label: 'گواهی دریافت شد', tone: 'verified' },
+  cancelled: { label: 'لغوشده', tone: 'neutral' },
+};
+
+export const jobRoles: Record<string, string> = {
+  sales: 'فروش و بازاریابی بیمه',
+  underwriting: 'کارشناس صدور',
+  claims: 'کارشناس خسارت',
+  adjuster: 'ارزیاب خسارت',
+  risk: 'مشاور و مهندس ریسک',
+  actuary: 'اکچوئری',
+  reinsurance: 'اتکایی',
+  customer_service: 'پشتیبانی مشتری',
+  other: 'سایر',
+};
+export const employmentTypes: Record<string, string> = {
+  full_time: 'تمام‌وقت',
+  part_time: 'پاره‌وقت',
+  contract: 'قراردادی',
+  commission: 'پورسانتی',
+  internship: 'کارآموزی',
+};
+export const applicationStatuses: Record<string, { label: string; tone: string }> = {
+  submitted: { label: 'ارسال‌شده', tone: 'neutral' },
+  reviewing: { label: 'در حال بررسی', tone: 'brand' },
+  shortlisted: { label: 'فهرست کوتاه', tone: 'amber' },
+  rejected: { label: 'رد شده', tone: 'danger' },
+  hired: { label: 'استخدام', tone: 'verified' },
+};

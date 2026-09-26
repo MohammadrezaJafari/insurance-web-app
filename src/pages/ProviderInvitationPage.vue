@@ -28,6 +28,7 @@ import SiteHeader from '../components/SiteHeader.vue';
 import SiteFooter from '../components/SiteFooter.vue';
 import JalaliDateInput from '../components/JalaliDateInput.vue';
 import StatusBadge from '../components/StatusBadge.vue';
+import DeliveryPanel from '../components/DeliveryPanel.vue';
 import MessageThread from '../components/MessageThread.vue';
 
 useMeta({
@@ -121,6 +122,9 @@ async function run(action: () => Promise<ProviderInvitation>, done = ''): Promis
 }
 function errorFor(key: string): string | undefined {
   return fieldErrors.value[key]?.[0];
+}
+async function reload(): Promise<void> {
+  invitation.value = await getInvitation(id);
 }
 async function download(attachmentId: number): Promise<void> {
   try {
@@ -471,6 +475,14 @@ onMounted(async () => {
         </div>
 
         <aside>
+          <DeliveryPanel
+            v-if="invitation.delivery"
+            :delivery="invitation.delivery"
+            :reference="invitation.request.reference"
+            role="provider"
+            :invitation-id="invitation.id"
+            @changed="reload"
+          />
           <section class="card">
             <h2><q-icon name="assignment" />مشخصات درخواست</h2>
             <template v-if="invitation.request.details">

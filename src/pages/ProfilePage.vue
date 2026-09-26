@@ -4,17 +4,22 @@ import { useMeta } from 'quasar';
 import { useRoute, useRouter } from 'vue-router';
 import { ApiError } from '../api';
 import { useDirectoryStore } from '../stores/directory';
-import { actorTypes, faDate, faMoneyShort, faNumber } from '../format';
+import { actorTypes, faDate, faMoneyShort, faNumber, itemKinds, socialNetworks } from '../format';
 import SiteHeader from '../components/SiteHeader.vue';
 import SiteFooter from '../components/SiteFooter.vue';
 import ReportErrorDialog from '../components/ReportErrorDialog.vue';
 import OfficeMap from '../components/OfficeMap.vue';
+import ProfileTrust from '../components/ProfileTrust.vue';
+import ComplaintDialog from '../components/ComplaintDialog.vue';
 
 defineOptions({
   preFetch({ store, currentRoute, ssrContext }) {
     const directory = useDirectoryStore(store);
     return Promise.all([
-      directory.loadProfile(String(currentRoute.params.slug)),
+      directory.loadProfile(
+        String(currentRoute.params.slug),
+        typeof currentRoute.query.ref === 'string' ? currentRoute.query.ref : undefined,
+      ),
       directory.loadTaxonomy(),
     ]).then(
       () => undefined,
@@ -37,6 +42,10 @@ const actor = computed(() =>
 const loading = ref(false);
 const error = ref('');
 const reporting = ref(false);
+const complaining = ref(false);
+const canInquire = computed(
+  () => actor.value?.claimed && actor.value.type !== 'insurer' && actor.value.license_verified,
+);
 const type = computed(() => (actor.value ? actorTypes[actor.value.type] : null));
 const hasCompanyFacts = computed(
   () =>
@@ -90,6 +99,14 @@ watch(
 );
 onMounted(() => {
   if (!actor.value) void load();
+  // Remember the referral channel so a direct inquiry made after this visit is attributed to it.
+  if (typeof route.query.ref === 'string') {
+    try {
+      sessionStorage.setItem('insurehub_ref', route.query.ref);
+    } catch {
+      // Storage may be unavailable; attribution is best-effort.
+    }
+  }
 });
 </script>
 
@@ -153,6 +170,13 @@ onMounted(() => {
           >
             <q-icon name="language" size="18px" />وب‌سایت
           </a>
+          <router-link
+            v-if="canInquire"
+            :to="{ path: '/requests/new', query: { provider: actor.slug } }"
+            class="btn btn--amber"
+          >
+            <q-icon name="request_quote" size="18px" />استعلام مستقیم
+          </router-link>
           <button class="btn btn--outline" @click="reporting = true">
             <q-icon name="flag" size="18px" />گزارش خطا
           </button>
@@ -299,6 +323,68 @@ onMounted(() => {
             </p>
           </section>
 
+          <section v-if="actor.services?.length" class="card">
+            <h2>
+              <q-icon name="volunteer_activism" />خدمات<span class="self-reported"
+                >اظهار صاحب پروفایل</span
+              >
+            </h2>
+            <div class="chips">
+              <span v-for="service in actor.services" :key="service" class="chip">
+                <q-icon name="check" size="14px" />{{ service }}
+              </span>
+            </div>
+          </section>
+
+          <section v-if="actor.items?.length" class="card">
+            <h2>
+              <q-icon name="work_history" />پروژه‌ها، دستاوردها و محتوا<span class="self-reported"
+                >اظهار صاحب پروفایل</span
+              >
+            </h2>
+            <div v-for="item in actor.items" :key="item.id" class="showcase-item">
+              <span class="tile tile--sm tone-teal"
+                ><q-icon :name="itemKinds[item.kind]?.icon"
+              /></span>
+              <div>
+                <b>{{ item.title }}</b>
+                <small class="muted-text">
+                  {{ itemKinds[item.kind]?.label }}
+                  <template v-if="item.year"> · {{ faNumber(String(item.year)) }}</template>
+                  <template v-if="item.insurance_line"> · {{ item.insurance_line }}</template>
+                </small>
+                <p v-if="item.body" class="pre" style="margin: 4px 0 0">{{ item.body }}</p>
+                <a
+                  v-if="item.url"
+                  :href="item.url"
+                  class="link"
+                  target="_blank"
+                  rel="noopener noreferrer nofollow"
+                  >مشاهده</a
+                >
+              </div>
+            </div>
+          </section>
+
+          <section v-if="actor.offers?.length" class="card">
+            <h2><q-icon name="campaign" />پیشنهادهای ویژه</h2>
+            <router-link
+              v-for="offer in actor.offers"
+              :key="offer.id"
+              :to="`/offers/${offer.id}`"
+              class="review-item"
+            >
+              <div>
+                {{ offer.title }}
+                <small>
+                  <template v-if="offer.discount_text">{{ offer.discount_text }} · </template>
+                  {{ offer.services.slice(0, 2).join('، ') }}
+                </small>
+              </div>
+              <q-icon name="chevron_left" />
+            </router-link>
+          </section>
+
           <section class="card">
             <h2><q-icon name="workspace_premium" />مجوز و وابستگی</h2>
             <p v-if="!actor.licenses.length && !actor.affiliations?.length">
@@ -395,7 +481,33 @@ onMounted(() => {
             <p v-if="!actor.website && !actor.public_phone && !actor.office_address">
               راه ارتباطی عمومی ثبت نشده است.
             </p>
+            <div
+              v-if="actor.social_links && Object.keys(actor.social_links).length"
+              class="social-links"
+            >
+              <a
+                v-for="(url, network) in actor.social_links"
+                :key="network"
+                :href="url"
+                class="chip"
+                target="_blank"
+                rel="noopener noreferrer nofollow"
+              >
+                <q-icon :name="socialNetworks[network]?.icon ?? 'link'" size="14px" />
+                {{ socialNetworks[network]?.label ?? network }}
+              </a>
+            </div>
+            <router-link
+              v-if="actor.claimed"
+              :to="`/profiles/${actor.slug}/card`"
+              class="link"
+              style="display: block; margin-top: 10px"
+            >
+              <q-icon name="qr_code_2" /> کارت ویزیت دیجیتال
+            </router-link>
           </section>
+
+          <ProfileTrust v-if="actor.score" :score="actor.score" :reviews="actor.reviews ?? []" />
 
           <section class="card">
             <h2><q-icon name="source" />منبع اطلاعات</h2>
@@ -429,6 +541,16 @@ onMounted(() => {
         </aside>
       </div>
 
+      <p v-if="actor.claimed" class="muted-text" style="text-align: center; margin: 0 0 32px">
+        از خدمات این ارائه‌دهنده ناراضی هستید؟
+        <button class="link-button" @click="complaining = true">ثبت شکایت</button>
+      </p>
+      <ComplaintDialog
+        v-model="complaining"
+        :slug="actor.slug"
+        :name="actor.name"
+        :categories="directory.taxonomy?.complaint_categories ?? []"
+      />
       <ReportErrorDialog
         v-model="reporting"
         :slug="actor.slug"

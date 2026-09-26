@@ -11,7 +11,7 @@ export QUEUE_CONNECTION=sync MAIL_MAILER=array CACHE_STORE=array TENDERS_ENABLED
 rm -f "$DB_DATABASE"
 touch "$DB_DATABASE"
 php artisan migrate:fresh --force -q
-for seeder in DemoDirectorySeeder DemoMarketplaceSeeder DemoTenderSeeder; do
+for seeder in DemoDirectorySeeder DemoMarketplaceSeeder DemoTenderSeeder DemoBusinessSeeder; do
   php artisan db:seed --class="$seeder" --force -q
 done
 

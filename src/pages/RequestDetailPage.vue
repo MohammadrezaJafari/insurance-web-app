@@ -30,6 +30,8 @@ import SiteHeader from '../components/SiteHeader.vue';
 import SiteFooter from '../components/SiteFooter.vue';
 import StatusBadge from '../components/StatusBadge.vue';
 import MessageThread from '../components/MessageThread.vue';
+import ReviewForm from '../components/ReviewForm.vue';
+import DeliveryPanel from '../components/DeliveryPanel.vue';
 
 useMeta({
   title: 'جزئیات استعلام | اینشورهاب',
@@ -66,6 +68,11 @@ const fields = computed(
   () => meta.value?.types.find((type) => type.key === item.value?.request_type)?.fields ?? [],
 );
 const canSelect = computed(() => item.value?.status === 'open');
+const chosenProvider = computed(
+  () =>
+    item.value?.invitations.find((invitation) => invitation.proposal?.status === 'selected')
+      ?.provider.name ?? null,
+);
 const canCancel = computed(() => ['draft', 'submitted', 'open'].includes(item.value?.status ?? ''));
 const messageable = computed(() => ['open', 'selected'].includes(item.value?.status ?? ''));
 
@@ -82,6 +89,9 @@ async function run(action: () => Promise<RequestDetail>): Promise<void> {
   } finally {
     busy.value = false;
   }
+}
+async function reload(): Promise<void> {
+  item.value = await getRequest(reference);
 }
 async function download(id: number): Promise<void> {
   try {
@@ -183,7 +193,14 @@ onMounted(async () => {
         >
       </div>
       <div v-else-if="item.status === 'open' && !offers.length" class="notice notice--info">
-        درخواست برای {{ item.invitations.length.toLocaleString('fa-IR') }} ارائه‌دهنده ارسال شد.
+        <template v-if="item.visibility === 'public'">
+          درخواست در بازار عمومی منتشر شده؛ تاکنون
+          {{ item.invitations.length.toLocaleString('fa-IR') }} از
+          {{ item.max_providers.toLocaleString('fa-IR') }} ارائه‌دهنده پیوسته‌اند.
+        </template>
+        <template v-else>
+          درخواست برای {{ item.invitations.length.toLocaleString('fa-IR') }} ارائه‌دهنده ارسال شد.
+        </template>
         پیشنهادها به‌محض دریافت در این صفحه قابل مقایسه‌اند.
       </div>
       <div v-else-if="item.status === 'selected'" class="card outcome-box">
@@ -402,6 +419,18 @@ onMounted(async () => {
         </div>
 
         <aside>
+          <DeliveryPanel
+            v-if="item.delivery"
+            :delivery="item.delivery"
+            :reference="reference"
+            role="buyer"
+            @changed="reload"
+          />
+          <ReviewForm
+            v-if="['selected', 'closed'].includes(item.status) && !item.reviewed && chosenProvider"
+            :reference="reference"
+            :provider="chosenProvider"
+          />
           <section class="card">
             <h2><q-icon name="assignment" />مشخصات درخواست</h2>
             <div v-for="field in fields" :key="field.key" class="kv">

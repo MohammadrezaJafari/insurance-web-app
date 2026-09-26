@@ -15,6 +15,7 @@ import type { Opportunity, OpportunityDraft, PipelineMeta, Stage } from '../type
 import SiteHeader from '../components/SiteHeader.vue';
 import SiteFooter from '../components/SiteFooter.vue';
 import JalaliDateInput from '../components/JalaliDateInput.vue';
+import CrmNav from '../components/CrmNav.vue';
 
 useMeta({
   title: 'صندوق فرصت‌ها | اینشورهاب',
@@ -135,7 +136,7 @@ onMounted(async () => {
   <main class="container flow-page">
     <div class="dashboard-head">
       <div>
-        <div class="eyebrow">ارائه‌دهنده</div>
+        <div class="eyebrow">مدیریت کسب‌وکار</div>
         <h1>صندوق فرصت‌ها</h1>
       </div>
       <div class="stack-row">
@@ -161,6 +162,8 @@ onMounted(async () => {
         </button>
       </div>
     </div>
+
+    <CrmNav />
 
     <div v-if="error" class="state state--error">{{ error }}</div>
     <div v-else-if="!items || !meta" class="skeleton" style="height: 320px" />
@@ -235,7 +238,8 @@ onMounted(async () => {
             class="lead-card"
           >
             <b>{{ item.title }}</b>
-            <span v-if="item.contact_name">{{ item.contact_name }}</span>
+            <span v-if="item.client">{{ item.client.name }}</span>
+            <span v-else-if="item.contact_name">{{ item.contact_name }}</span>
             <div class="lead-card__meta">
               <span v-if="item.estimated_premium">{{ faMoneyShort(item.estimated_premium) }}</span>
               <span class="chip">{{ leadSources[item.source] }}</span>

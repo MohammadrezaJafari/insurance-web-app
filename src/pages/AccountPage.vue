@@ -14,7 +14,15 @@ import {
   requestChange,
 } from '../api';
 import { useAuthStore } from '../stores/auth';
-import { actorTypes, faDate, faNumber, fieldLabels, statusLabels } from '../format';
+import {
+  actorTypes,
+  faDate,
+  faNumber,
+  fieldLabels,
+  referralChannels,
+  socialNetworks,
+  statusLabels,
+} from '../format';
 import type { Actor, EditableFields, OwnedProfile, ReviewItem } from '../types';
 import SiteHeader from '../components/SiteHeader.vue';
 import SiteFooter from '../components/SiteFooter.vue';
@@ -42,18 +50,71 @@ const profiles = ref<OwnedProfile[]>([]);
 const claims = ref<ReviewItem[]>([]);
 const changes = ref<ReviewItem[]>([]);
 const editing = ref('');
+const isProvider = computed(() => profiles.value.some((profile) => profile.type !== 'insurer'));
+const isInsurer = computed(() => profiles.value.some((profile) => profile.type === 'insurer'));
+const toolGroups = computed(() =>
+  [
+    {
+      title: 'کسب‌وکار',
+      tools: [
+        ...(isProvider.value
+          ? [
+              { to: '/provider', label: 'کارتابل دعوت‌ها', icon: 'inbox' },
+              { to: '/provider/market', label: 'بازار فرصت‌ها', icon: 'storefront' },
+              { to: '/crm', label: 'صندوق فرصت‌ها و مشتریان', icon: 'view_kanban' },
+              { to: '/crm/assistant', label: 'دستیار فروش', icon: 'auto_awesome' },
+            ]
+          : []),
+        ...(isInsurer.value
+          ? [{ to: '/insurer', label: 'داشبورد شرکت بیمه', icon: 'insights' }]
+          : []),
+      ],
+    },
+    {
+      title: 'حضور و معرفی',
+      tools: profiles.value.length
+        ? [
+            { to: '/account/showcase', label: 'نمونه‌کار و نظرها', icon: 'star' },
+            { to: '/account/promotions', label: 'پیشنهادهای ویژه', icon: 'campaign' },
+            { to: '/account/placements', label: 'معرفی ویژه', icon: 'auto_awesome_motion' },
+          ]
+        : [],
+    },
+    {
+      title: 'آموزش و کار',
+      tools: [
+        { to: '/account/learning', label: 'آموزش‌های من', icon: 'school' },
+        { to: '/account/resume', label: 'رزومه و درخواست‌ها', icon: 'badge' },
+        ...(profiles.value.length
+          ? [
+              { to: '/account/courses', label: 'دوره‌های من', icon: 'cast_for_education' },
+              { to: '/account/jobs', label: 'آگهی‌های استخدام', icon: 'work' },
+            ]
+          : []),
+      ],
+    },
+    {
+      title: 'حساب',
+      tools: [{ to: '/account/billing', label: 'اشتراک و صورت‌حساب', icon: 'receipt_long' }],
+    },
+  ].filter((group) => group.tools.length),
+);
 const draft = reactive<{
   description: string;
   city: string;
   website: string;
   public_phone: string;
   specialties: string;
+  services: string;
+  social_links: Record<string, string>;
 }>({
   description: '',
   city: '',
   website: '',
   public_phone: '',
   specialties: '',
+  services: '',
+  social_links: {},
 });
 
 async function authenticate(): Promise<void> {
@@ -126,7 +187,16 @@ function startEditing(profile: OwnedProfile): void {
   draft.website = profile.editable.website ?? '';
   draft.public_phone = profile.editable.public_phone ?? '';
   draft.specialties = (profile.editable.specialties ?? []).join('، ');
+  draft.services = (profile.editable.services ?? []).join('، ');
+  draft.social_links = Object.fromEntries(
+    Object.keys(socialNetworks).map((key) => [key, profile.editable.social_links?.[key] ?? '']),
+  );
 }
+const splitList = (value: string) =>
+  value
+    .split(/[،,]/)
+    .map((item) => item.trim())
+    .filter(Boolean);
 
 async function submitChange(profile: OwnedProfile): Promise<void> {
   const proposed: Partial<EditableFields> = {
@@ -134,17 +204,22 @@ async function submitChange(profile: OwnedProfile): Promise<void> {
     city: draft.city.trim() || null,
     website: draft.website.trim() || null,
     public_phone: draft.public_phone.trim() || null,
-    specialties: draft.specialties
-      .split(/[،,]/)
-      .map((item) => item.trim())
-      .filter(Boolean),
+    specialties: splitList(draft.specialties),
+    services: splitList(draft.services),
+    social_links: Object.fromEntries(
+      Object.entries(draft.social_links)
+        .map(([key, value]) => [key, value.trim()])
+        .filter(([, value]) => value),
+    ),
   };
+  if (!Object.keys(proposed.social_links ?? {}).length) proposed.social_links = null;
   const changed = Object.fromEntries(
     Object.entries(proposed).filter(
       ([key, value]) =>
         JSON.stringify(value) !==
         JSON.stringify(
-          profile.editable[key as keyof EditableFields] ?? (key === 'specialties' ? [] : null),
+          profile.editable[key as keyof EditableFields] ??
+            (key === 'specialties' || key === 'services' ? [] : null),
         ),
     ),
   );
@@ -277,26 +352,24 @@ onMounted(async () => {
           <router-link to="/requests" class="btn btn--primary">
             <q-icon name="request_quote" size="18px" />استعلام‌های من
           </router-link>
-          <template v-if="profiles.some((profile) => profile.type !== 'insurer')">
-            <router-link to="/provider" class="btn btn--amber">
-              <q-icon name="inbox" size="18px" />کارتابل دعوت‌ها
-            </router-link>
-            <router-link to="/crm" class="btn btn--outline">
-              <q-icon name="view_kanban" size="18px" />صندوق فرصت‌ها
-            </router-link>
-          </template>
-          <router-link
-            v-if="profiles.some((profile) => profile.type === 'insurer')"
-            to="/insurer"
-            class="btn btn--amber"
-          >
-            <q-icon name="insights" size="18px" />داشبورد شبکه فروش
-          </router-link>
           <button class="btn btn--outline" @click="signOut">
             <q-icon name="logout" size="18px" />خروج
           </button>
         </div>
       </div>
+      <nav class="account-tools" aria-label="ابزارها">
+        <section v-for="group in toolGroups" :key="group.title">
+          <h2>{{ group.title }}</h2>
+          <router-link
+            v-for="tool in group.tools"
+            :key="tool.to"
+            :to="tool.to"
+            class="account-tool"
+          >
+            <q-icon :name="tool.icon" size="20px" />{{ tool.label }}
+          </router-link>
+        </section>
+      </nav>
       <div v-if="message" class="notice" style="margin: 0 0 16px">{{ message }}</div>
 
       <div class="dashboard-grid">
@@ -338,6 +411,12 @@ onMounted(async () => {
               <span
                 ><b>{{ faNumber(profile.views_30d) }}</b> بازدید در ۳۰ روز</span
               >
+              <span v-for="(count, channel) in profile.channels_30d" :key="channel" class="chip">
+                {{ referralChannels[channel] ?? channel }}: {{ faNumber(count) }}
+              </span>
+              <router-link :to="`/profiles/${profile.slug}/card`" class="link"
+                >کارت ویزیت و پیوند اشتراک</router-link
+              >
               <span v-if="profile.pending_changes" class="badge badge--amber"
                 >پیشنهاد اصلاح در انتظار بررسی</span
               >
@@ -378,6 +457,19 @@ onMounted(async () => {
               <label class="field-label">
                 تخصص‌ها (با ویرگول جدا کنید)
                 <input v-model="draft.specialties" class="input" />
+              </label>
+              <label class="field-label span-2">
+                خدمات شما (با ویرگول جدا کنید؛ مثلاً مشاورهٔ رایگان، پیگیری خسارت)
+                <input v-model="draft.services" class="input" />
+              </label>
+              <label v-for="(network, key) in socialNetworks" :key="key" class="field-label">
+                {{ network.label }}
+                <input
+                  v-model="draft.social_links[key]"
+                  class="input"
+                  dir="ltr"
+                  placeholder="@handle یا نشانی کامل"
+                />
               </label>
               <div class="span-2 dialog-actions">
                 <button type="button" class="btn btn--ghost" @click="editing = ''">انصراف</button>

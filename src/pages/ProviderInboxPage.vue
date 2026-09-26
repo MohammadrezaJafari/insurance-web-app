@@ -56,6 +56,9 @@ onMounted(async () => {
         <div class="eyebrow">ارائه‌دهنده</div>
         <h1>کارتابل دعوت‌ها</h1>
       </div>
+      <router-link to="/provider/market" class="btn btn--amber">
+        <q-icon name="storefront" size="18px" />بازار فرصت‌ها
+      </router-link>
       <router-link to="/crm" class="btn btn--outline">
         <q-icon name="view_kanban" size="18px" />صندوق فرصت‌ها
       </router-link>

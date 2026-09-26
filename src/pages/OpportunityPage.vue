@@ -7,18 +7,29 @@ import {
   addReminder,
   changeStage,
   completeReminder,
+  createClient,
   getOpportunity,
   logActivity,
   updateOpportunity,
 } from '../api';
 import { useRequireAuth } from '../composables/useRequireAuth';
-import { activityTypes, crmStages, faDate, faDateTime, faMoney, leadSources } from '../format';
+import {
+  activityTypes,
+  crmStages,
+  errorMessage,
+  faDate,
+  faDateTime,
+  faMoney,
+  leadSources,
+} from '../format';
 import { localIsoDate } from '../jalali';
 import type { Opportunity, OpportunityDraft, Stage } from '../types';
 import SiteHeader from '../components/SiteHeader.vue';
 import SiteFooter from '../components/SiteFooter.vue';
 import JalaliDateInput from '../components/JalaliDateInput.vue';
 import StatusBadge from '../components/StatusBadge.vue';
+import CrmNav from '../components/CrmNav.vue';
+import PolicyDialog from '../components/PolicyDialog.vue';
 
 useMeta({ title: 'فرصت | اینشورهاب', meta: { robots: { name: 'robots', content: 'noindex' } } });
 
@@ -51,6 +62,43 @@ const draft = reactive<OpportunityDraft>({
 
 const platform = computed(() => item.value?.source === 'platform');
 const stageFlow: Stage[] = ['new', 'contacted', 'quoting', 'negotiation', 'won', 'lost'];
+const policyOpen = ref(false);
+const canRecordPolicy = computed(
+  () =>
+    !!item.value &&
+    !item.value.policy_id &&
+    (item.value.stage === 'won' || (!platform.value && item.value.stage === 'negotiation')),
+);
+const policyPreset = computed(() => ({
+  insurance_line: item.value?.renewal_of?.insurance_line ?? item.value?.insurance_line ?? '',
+  premium: item.value?.estimated_premium ?? null,
+  starts_on: item.value?.renewal_of?.ends_on ?? null,
+}));
+
+/** A policy needs a client; one is created from the lead's contact when the lead has none. */
+async function recordPolicy(): Promise<void> {
+  if (!item.value) return;
+  if (!item.value.client) {
+    busy.value = true;
+    try {
+      const client = await createClient(item.value.provider.slug, {
+        name: item.value.contact_name || item.value.title,
+        phone: item.value.contact_phone,
+        email: item.value.contact_email,
+      });
+      item.value = await updateOpportunity(id, { client_id: client.id });
+    } catch (exception) {
+      actionError.value = errorMessage(exception);
+      return;
+    } finally {
+      busy.value = false;
+    }
+  }
+  policyOpen.value = true;
+}
+async function policySaved(): Promise<void> {
+  item.value = (await getOpportunity(id)).data;
+}
 const openReminders = computed(
   () => item.value?.reminders?.filter((entry) => !entry.completed_at) ?? [],
 );
@@ -123,6 +171,7 @@ onMounted(async () => {
       <q-icon name="chevron_left" />
       <span>فرصت</span>
     </nav>
+    <CrmNav />
 
     <div v-if="error" class="state state--error">{{ error }}</div>
     <div v-else-if="!item" class="skeleton" style="height: 240px" />
@@ -144,6 +193,21 @@ onMounted(async () => {
           </div>
         </div>
         <div class="profile-head__actions">
+          <button
+            v-if="canRecordPolicy"
+            class="btn btn--primary"
+            :disabled="busy"
+            @click="recordPolicy"
+          >
+            <q-icon name="note_add" size="18px" />ثبت بیمه‌نامه
+          </button>
+          <router-link
+            v-if="item.client"
+            :to="`/crm/clients/${item.client.id}`"
+            class="btn btn--outline"
+          >
+            پروندهٔ مشتری
+          </router-link>
           <router-link
             v-if="item.invitation_id"
             :to="`/provider/invitations/${item.invitation_id}`"
@@ -318,7 +382,20 @@ onMounted(async () => {
               <button class="btn btn--primary" :disabled="busy">ذخیره</button>
             </div>
           </form>
-          <section v-else class="card">
+          <section v-if="item.renewal_of" class="card">
+            <h2><q-icon name="autorenew" />بیمه‌نامهٔ در حال تمدید</h2>
+            <div class="kv">
+              <b>رشته</b><span>{{ item.renewal_of.insurance_line }}</span>
+            </div>
+            <div class="kv">
+              <b>پایان</b><span>{{ faDate(item.renewal_of.ends_on) }}</span>
+            </div>
+            <div class="kv">
+              <b>حق بیمهٔ دورهٔ قبل</b><span>{{ faMoney(item.renewal_of.premium) }}</span>
+            </div>
+            <p class="card__note">با ثبت بیمه‌نامهٔ جدید، بیمه‌نامهٔ قبلی «تمدیدشده» می‌شود.</p>
+          </section>
+          <section v-if="!editing" class="card">
             <h2><q-icon name="contact_page" />مخاطب و ارزش</h2>
             <div class="kv">
               <b>مخاطب</b
@@ -396,6 +473,14 @@ onMounted(async () => {
           </section>
         </aside>
       </div>
+      <PolicyDialog
+        v-model="policyOpen"
+        :client-id="item.client?.id ?? null"
+        :client-name="item.client?.name"
+        :opportunity-id="item.id"
+        :preset="policyPreset"
+        @saved="policySaved"
+      />
     </template>
   </main>
   <SiteFooter />

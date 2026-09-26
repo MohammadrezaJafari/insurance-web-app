@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue';
 import { useMeta } from 'quasar';
+import { useRoute, useRouter } from 'vue-router';
 import { ApiError, insurerDashboard } from '../api';
 import { useRequireAuth } from '../composables/useRequireAuth';
 import { actorTypes, faDateTime, faNumber, invitationStatuses } from '../format';
@@ -8,6 +9,8 @@ import type { InsurerDashboard } from '../types';
 import SiteHeader from '../components/SiteHeader.vue';
 import SiteFooter from '../components/SiteFooter.vue';
 import StatusBadge from '../components/StatusBadge.vue';
+import InsurerNav from '../components/InsurerNav.vue';
+import InsurerSalesPanel from '../components/InsurerSalesPanel.vue';
 
 useMeta({
   title: 'داشبورد شبکه فروش | اینشورهاب',
@@ -17,7 +20,9 @@ useMeta({
 const requireAuth = useRequireAuth();
 const data = ref<InsurerDashboard | null>(null);
 const error = ref('');
-const slug = ref('');
+const route = useRoute();
+const router = useRouter();
+const slug = ref(String(route.query.insurer ?? ''));
 
 function percent(value: number | null): string {
   return value === null ? '—' : `${faNumber(value)}٪`;
@@ -29,6 +34,9 @@ async function load(): Promise<void> {
   error.value = '';
   try {
     data.value = await insurerDashboard(slug.value || undefined);
+    if (slug.value && slug.value !== route.query.insurer) {
+      void router.replace({ query: { ...route.query, insurer: slug.value } });
+    }
     slug.value = data.value.insurer.slug;
   } catch (exception) {
     error.value = exception instanceof ApiError ? exception.message : 'دریافت داشبورد ممکن نشد.';
@@ -46,7 +54,7 @@ onMounted(async () => {
     <div class="dashboard-head">
       <div>
         <div class="eyebrow">شرکت بیمه</div>
-        <h1>داشبورد شبکه فروش{{ data ? ` · ${data.insurer.name}` : '' }}</h1>
+        <h1>داشبورد شرکت بیمه{{ data ? ` · ${data.insurer.name}` : '' }}</h1>
       </div>
       <select
         v-if="data && data.insurers.length > 1"
@@ -61,6 +69,7 @@ onMounted(async () => {
         </option>
       </select>
     </div>
+    <InsurerNav />
     <p class="muted-text" style="margin-top: -8px">
       فقط فعالیت نمایندگان با وابستگی بررسی‌شده و فعال به این شرکت در
       {{ faNumber(data?.period_days ?? 90) }} روز اخیر. هویت درخواست‌کننده، متن درخواست، مدارک و
@@ -71,6 +80,10 @@ onMounted(async () => {
     <div v-else-if="!data" class="skeleton" style="height: 320px" />
 
     <template v-else>
+      <InsurerSalesPanel :insurer="data.insurer.slug" />
+      <h2 class="section-title" style="margin-top: 28px">
+        پاسخ‌گویی شبکه به استعلام‌های اینشورهاب
+      </h2>
       <div class="kpi-row">
         <div class="kpi">
           <span>دعوت دریافتی شبکه</span><b>{{ faNumber(data.totals.invitations) }}</b>

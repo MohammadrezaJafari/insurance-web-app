@@ -8,6 +8,7 @@ import type { ActorType } from '../types';
 import SiteHeader from '../components/SiteHeader.vue';
 import SiteFooter from '../components/SiteFooter.vue';
 import ActorRow from '../components/ActorRow.vue';
+import SponsoredStrip from '../components/SponsoredStrip.vue';
 
 defineOptions({
   preFetch({ store, currentRoute }) {
@@ -200,6 +201,12 @@ onMounted(() => {
         class="result-list"
         :style="{ opacity: loading ? 0.6 : 1 }"
       >
+        <SponsoredStrip
+          placement="search"
+          :line="(route.query.line as string) || undefined"
+          :province="(route.query.province as string) || undefined"
+          :type="currentType || undefined"
+        />
         <ActorRow v-for="actor in data.data" :key="actor.slug" :actor="actor" />
       </div>
       <div v-else class="state">
