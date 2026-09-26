@@ -808,7 +808,8 @@ h3 {
   font-size: 14px;
   margin: 0;
 }
-.card__note {
+.card__note,
+.card .card__note {
   font-size: 12px;
   color: var(--muted);
   margin-top: 12px;
@@ -915,6 +916,12 @@ h3 {
   border-radius: 16px;
   padding: 24px;
   direction: rtl;
+  /* Long forms scroll inside the dialog so the actions stay reachable. */
+  max-height: calc(100dvh - 48px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  /* Quasar only re-enables pointer events for div children of the dialog. */
+  pointer-events: all;
 }
 .dialog-card h2 {
   font-size: 19px;
@@ -1105,7 +1112,17 @@ h3 {
 }
 
 /* ---------- Footer ---------- */
+/* Short pages keep the footer at the bottom of the viewport. */
+#q-app {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+#q-app > main {
+  flex: 1 0 auto;
+}
 .site-footer {
+  flex-shrink: 0;
   border-top: 1px solid var(--line);
   background: var(--surface);
   color: var(--muted);
@@ -1170,7 +1187,8 @@ h3 {
   .header-search {
     display: none;
   }
-  .header-actions .btn--amber span {
+  .header-actions .btn--amber span,
+  .header-actions .header-user__name {
     display: none;
   }
   .home-hero {
@@ -1399,6 +1417,11 @@ h3 {
   overflow-x: auto;
   margin: 0 -22px;
   padding: 0 22px;
+}
+/* A table that is the card itself has no card padding to bleed into. */
+.card.compare-scroll {
+  margin: 0;
+  padding: 0;
 }
 .compare {
   width: 100%;

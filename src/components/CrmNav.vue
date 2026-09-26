@@ -36,7 +36,7 @@ const links = [
   {
     to: '/crm/report',
     label: 'گزارش عملکرد',
-    icon: 'monitoring',
+    icon: 'assessment',
     match: (path: string) => path.startsWith('/crm/report'),
   },
 ];

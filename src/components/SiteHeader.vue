@@ -73,8 +73,15 @@ function submit(): void {
       </form>
       <div class="header-actions">
         <NotificationBell v-if="auth.loggedIn" />
-        <router-link v-if="auth.loggedIn" to="/account" class="btn btn--ghost">
-          <q-icon name="account_circle" size="20px" />{{ auth.user?.name }}
+        <router-link
+          v-if="auth.loggedIn"
+          to="/account"
+          class="btn btn--ghost"
+          :aria-label="auth.user?.name"
+        >
+          <q-icon name="account_circle" size="20px" /><span class="header-user__name">{{
+            auth.user?.name
+          }}</span>
         </router-link>
         <template v-else>
           <router-link to="/account" class="btn btn--ghost">ورود</router-link>

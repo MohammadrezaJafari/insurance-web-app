@@ -229,11 +229,13 @@ onMounted(async () => {
       <aside>
         <form class="card" @submit.prevent="searchTalent">
           <h2><q-icon name="person_search" />جست‌وجوی رزومه</h2>
-          <select v-model="talentRole" class="select">
-            <option value="">همهٔ نقش‌ها</option>
-            <option v-for="(label, key) in jobRoles" :key="key" :value="key">{{ label }}</option>
-          </select>
-          <button class="btn btn--outline btn--block">جست‌وجو</button>
+          <div class="stack">
+            <select v-model="talentRole" class="select">
+              <option value="">همهٔ نقش‌ها</option>
+              <option v-for="(label, key) in jobRoles" :key="key" :value="key">{{ label }}</option>
+            </select>
+            <button class="btn btn--outline btn--block">جست‌وجو</button>
+          </div>
           <p class="card__note">
             فقط رزومه‌های عمومی و بدون راه تماس نمایش داده می‌شوند؛ با دعوت، فرد خودش درخواست
             می‌دهد.
@@ -264,7 +266,7 @@ onMounted(async () => {
               دعوت
             </button>
           </div>
-          <p v-if="people && !people.length" class="muted-text">رزومه‌ای پیدا نشد.</p>
+          <p v-if="people && !people.length" class="card__note">رزومه‌ای پیدا نشد.</p>
         </form>
       </aside>
     </div>
